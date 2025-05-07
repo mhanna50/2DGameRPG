@@ -7,6 +7,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var enemy: SKSpriteNode!
     var gameOverLabel: SKLabelNode!
     
+    // Flag to track game over state
+    var isGameOver = false
+    
     // Track the last update time for spawn timing
     var lastUpdateTime: TimeInterval = 0.0
     var timeSinceLastSpawn: TimeInterval = 0.0
@@ -21,6 +24,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         static let coin: UInt32 = 0x1 << 1
         static let enemy: UInt32 = 0x1 << 2
         static let specialEnemy: UInt32 = 0x1 << 3
+        static let border: UInt32 = 0x1 << 4  // Add a new category for borders
     }
 
     override func didMove(to view: SKView) {
@@ -28,15 +32,34 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         physicsWorld.gravity = .zero
         physicsWorld.contactDelegate = self
         
+        // Create a physics border for the entire scene
+        let borderBody = SKPhysicsBody(edgeLoopFrom: frame)
+        borderBody.categoryBitMask = PhysicsCategory.border
+        borderBody.contactTestBitMask = PhysicsCategory.player
+        borderBody.collisionBitMask = PhysicsCategory.player
+        borderBody.isDynamic = false
+        borderBody.restitution = 0  // Prevents bouncing off the walls
+        self.physicsBody = borderBody
+        
+        // Create a visible border using SKShapeNode
+        let borderNode = SKShapeNode(rect: frame)
+        borderNode.strokeColor = .red
+        borderNode.lineWidth = 5
+        borderNode.zPosition = 10  // Make sure it's above other background elements
+        addChild(borderNode)
+
         // Connect to the player node from the .sks file
         if let playerNode = childNode(withName: "player") as? SKSpriteNode {
             player = playerNode
             player.physicsBody = SKPhysicsBody(rectangleOf: player.size)
             player.physicsBody?.isDynamic = true
+            player.physicsBody?.allowsRotation = false  // Prevent the player from rotating on impact
             player.physicsBody?.categoryBitMask = PhysicsCategory.player
-            player.physicsBody?.contactTestBitMask = PhysicsCategory.coin | PhysicsCategory.enemy | PhysicsCategory.specialEnemy
-
-            player.physicsBody?.collisionBitMask = 0
+            player.physicsBody?.contactTestBitMask = PhysicsCategory.coin | PhysicsCategory.enemy | PhysicsCategory.specialEnemy | PhysicsCategory.border
+            player.physicsBody?.collisionBitMask = PhysicsCategory.border | PhysicsCategory.enemy | PhysicsCategory.specialEnemy
+            player.physicsBody?.friction = 0  // Optional: prevent the player from slowing down on contact
+            player.physicsBody?.restitution = 0  // Prevent bouncing off walls
+            player.physicsBody?.linearDamping = 0  // Ensure smooth movement
             player.zPosition = 1
         }
 
@@ -45,37 +68,29 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             scoreLabel = labelNode
             scoreLabel.text = "Score: \(score)"
         }
-        
-        // Set up enemy node from .sks file
-        if let enemyNode = childNode(withName: "enemy") as? SKSpriteNode {
-            enemy = enemyNode
-            enemy.physicsBody = SKPhysicsBody(rectangleOf: enemy.size)
-            enemy.physicsBody?.isDynamic = false  // The enemy is stationary
-            enemy.physicsBody?.categoryBitMask = PhysicsCategory.enemy
-            enemy.physicsBody?.contactTestBitMask = PhysicsCategory.player
-            enemy.physicsBody?.collisionBitMask = 0
-            enemy.zPosition = 2
-        }
 
         // Set up camera
         let cameraNode = SKCameraNode()
         camera = cameraNode
         addChild(cameraNode)
-        
+
         // Set up game over label (hidden initially)
         gameOverLabel = SKLabelNode(fontNamed: "Arial")
         gameOverLabel.fontSize = 50
         gameOverLabel.text = "Game Over"
         gameOverLabel.position = CGPoint(x: frame.midX, y: frame.midY)
-        gameOverLabel.isHidden = true  // Hide initially
+        gameOverLabel.isHidden = true
         addChild(gameOverLabel)
-
-        // Attach the game over label to the player so it follows the player
-        gameOverLabel.zPosition = 3  // Make sure it's above the player
+        gameOverLabel.zPosition = 3
         gameOverLabel.name = "gameOverLabel"
     }
 
+
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if isGameOver {
+            return
+        }
+        
         if let touch = touches.first {
             let location = touch.location(in: self)
             movePlayerSmoothly(to: location)
@@ -87,12 +102,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let direction = targetPosition - player.position  // Get direction vector
         let distance = direction.length()  // Get the distance to the target
         
-        if distance > 1 {  // If not already at the target position
-            let moveDuration = distance / moveSpeed  // Calculate the duration based on distance and speed
-            let moveAction = SKAction.move(to: targetPosition, duration: moveDuration)
-            player.run(moveAction)
+        if distance > 1 {
+            // Normalize the direction vector
+            let normalizedDirection = CGPoint(x: direction.x / distance, y: direction.y / distance)
+            
+            // Set the velocity directly on the physics body for better collision handling
+            let velocity = CGVector(dx: normalizedDirection.x * moveSpeed, dy: normalizedDirection.y * moveSpeed)
+            player.physicsBody?.velocity = velocity
+        } else {
+            // Stop the player if the target is reached
+            player.physicsBody?.velocity = .zero
         }
     }
+
 
     override func update(_ currentTime: TimeInterval) {
         // Initialize lastUpdateTime on the first frame
@@ -227,6 +249,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         // Disable player movement and any other actions
         player.removeAllActions()
+        
+        isGameOver = true
         
         // Optionally, stop the coin spawning or any other game mechanics
         isUserInteractionEnabled = false
