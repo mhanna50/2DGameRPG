@@ -1,35 +1,22 @@
-//
-//  GameViewController.swift
-//  2DGameRPG iOS
-//
-//  Created by michael hanna on 4/22/25.
-//
-
 import UIKit
 import SpriteKit
-import GameplayKit
 
 class GameViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        let scene = GameScene.newGameScene()
 
-        // Present the scene
-        let skView = self.view as! SKView
-        skView.presentScene(scene)
-        
-        skView.ignoresSiblingOrder = true
-        skView.showsFPS = true
-        skView.showsNodeCount = true
-    }
+        if let view = self.view as? SKView {
+            // Create a new GameScene with the current view size
+            let scene = GameScene(size: view.bounds.size)
+            scene.scaleMode = .resizeFill
+            
+            // Present the scene
+            view.presentScene(scene)
 
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
-        if UIDevice.current.userInterfaceIdiom == .phone {
-            return .allButUpsideDown
-        } else {
-            return .all
+            view.ignoresSiblingOrder = true
+            view.showsFPS = true
+            view.showsNodeCount = true
         }
     }
 
@@ -37,3 +24,5 @@ class GameViewController: UIViewController {
         return true
     }
 }
+
+
