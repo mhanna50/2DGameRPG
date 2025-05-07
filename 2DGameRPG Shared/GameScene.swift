@@ -4,6 +4,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var player: SKSpriteNode!
     var scoreLabel: SKLabelNode!
     var score = 0
+    var enemy: SKSpriteNode!
+    var gameOverLabel: SKLabelNode!
     
     // Track the last update time for spawn timing
     var lastUpdateTime: TimeInterval = 0.0
@@ -14,58 +16,77 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     struct PhysicsCategory {
         static let player: UInt32 = 0x1 << 0
         static let coin: UInt32 = 0x1 << 1
+        static let enemy: UInt32 = 0x1 << 2
     }
 
     override func didMove(to view: SKView) {
-        // Disable world gravity
+        // Set up physics world
         physicsWorld.gravity = .zero
         physicsWorld.contactDelegate = self
         
-        // Set up player
-        player = SKSpriteNode(color: .blue, size: CGSize(width: 50, height: 50))
-        player.position = CGPoint(x: frame.midX, y: frame.midY)
-        player.physicsBody = SKPhysicsBody(rectangleOf: player.size)
-        player.physicsBody?.isDynamic = true  // Allow it to move
-        player.physicsBody?.categoryBitMask = PhysicsCategory.player
-        player.physicsBody?.contactTestBitMask = PhysicsCategory.coin
-        player.physicsBody?.collisionBitMask = 0
-        player.zPosition = 1  // Ensure the player is in front of the coins
-        addChild(player)
+        // Connect to the player node from the .sks file
+        if let playerNode = childNode(withName: "player") as? SKSpriteNode {
+            player = playerNode
+            player.physicsBody = SKPhysicsBody(rectangleOf: player.size)
+            player.physicsBody?.isDynamic = true
+            player.physicsBody?.categoryBitMask = PhysicsCategory.player
+            player.physicsBody?.contactTestBitMask = PhysicsCategory.coin | PhysicsCategory.enemy
+            player.physicsBody?.collisionBitMask = 0
+            player.zPosition = 1
+        }
 
-        // Set up score label
-        scoreLabel = SKLabelNode(fontNamed: "Arial")
-        scoreLabel.fontSize = 30
-        scoreLabel.position = CGPoint(x: frame.midX, y: frame.maxY - 60)
-        scoreLabel.text = "Score: \(score)"
-        addChild(scoreLabel)
+        // Connect to the score label from the .sks file
+        if let labelNode = childNode(withName: "scoreLabel") as? SKLabelNode {
+            scoreLabel = labelNode
+            scoreLabel.text = "Score: \(score)"
+        }
+        
+        // Set up enemy node from .sks file
+        if let enemyNode = childNode(withName: "enemy") as? SKSpriteNode {
+            enemy = enemyNode
+            enemy.physicsBody = SKPhysicsBody(rectangleOf: enemy.size)
+            enemy.physicsBody?.isDynamic = false  // The enemy is stationary
+            enemy.physicsBody?.categoryBitMask = PhysicsCategory.enemy
+            enemy.physicsBody?.contactTestBitMask = PhysicsCategory.player
+            enemy.physicsBody?.collisionBitMask = 0
+            enemy.zPosition = 2
+        }
 
         // Set up camera
         let cameraNode = SKCameraNode()
         camera = cameraNode
         addChild(cameraNode)
+        
+        // Set up game over label (hidden initially)
+        gameOverLabel = SKLabelNode(fontNamed: "Arial")
+        gameOverLabel.fontSize = 50
+        gameOverLabel.text = "Game Over"
+        gameOverLabel.position = CGPoint(x: frame.midX, y: frame.midY)
+        gameOverLabel.isHidden = true  // Hide initially
+        addChild(gameOverLabel)
+
+        // Attach the game over label to the player so it follows the player
+        gameOverLabel.zPosition = 3  // Make sure it's above the player
+        gameOverLabel.name = "gameOverLabel"
     }
 
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        // Move player based on touch location
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let touch = touches.first {
             let location = touch.location(in: self)
-            movePlayer(to: location)
+            movePlayerSmoothly(to: location)
         }
     }
 
-    func movePlayer(to position: CGPoint) {
-        // Calculate the distance from the player to the target position
-        let distance = player.position.distance(to: position)
+    func movePlayerSmoothly(to targetPosition: CGPoint) {
+        let moveSpeed: CGFloat = 200  // Adjust this to control the speed of movement
+        let direction = targetPosition - player.position  // Get direction vector
+        let distance = direction.length()  // Get the distance to the target
         
-        // Set a base duration based on the distance to ensure movement time is proportional
-        let duration = TimeInterval(distance / 500) // 500 is a speed factor you can adjust
-        
-        // Create a move action with ease in/out
-        let moveAction = SKAction.move(to: position, duration: duration)
-        moveAction.timingMode = .easeInEaseOut // Smooth easing
-        
-        // Run the action to move the player
-        player.run(moveAction)
+        if distance > 1 {  // If not already at the target position
+            let moveDuration = distance / moveSpeed  // Calculate the duration based on distance and speed
+            let moveAction = SKAction.move(to: targetPosition, duration: moveDuration)
+            player.run(moveAction)
+        }
     }
 
     override func update(_ currentTime: TimeInterval) {
@@ -135,20 +156,47 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             // Update the score
             updateScore()
         }
+        
+        // Check if the player collided with the enemy
+        if (firstBody.categoryBitMask == PhysicsCategory.player && secondBody.categoryBitMask == PhysicsCategory.enemy) ||
+           (secondBody.categoryBitMask == PhysicsCategory.player && firstBody.categoryBitMask == PhysicsCategory.enemy) {
+            
+            // End the game by calling the game over function
+            endGame()
+        }
     }
 
     func updateScore() {
         score += 1
-        scoreLabel.text = "Score: \(score)"
+        // Since the score label is a child of the player, you can find it like this:
+        if let label = player.childNode(withName: "scoreLabel") as? SKLabelNode {
+            label.text = "Score: \(score)"
+        }
+    }
+
+    func endGame() {
+        // Show the "Game Over" label
+        gameOverLabel.isHidden = false
+        
+        // Attach the game over label to the player
+        gameOverLabel.position = CGPoint(x: player.position.x, y: player.position.y + 50) // Adjust the position as needed
+        
+        // Disable player movement and any other actions
+        player.removeAllActions()
+        
+        // Optionally, stop the coin spawning or any other game mechanics
+        isUserInteractionEnabled = false
     }
 }
 
+// Helper extensions for CGPoint to handle movement and directions
 extension CGPoint {
-    // Helper method to calculate the distance between two points
-    func distance(to point: CGPoint) -> CGFloat {
-        let dx = self.x - point.x
-        let dy = self.y - point.y
-        return sqrt(dx * dx + dy * dy)
+    static func -(left: CGPoint, right: CGPoint) -> CGPoint {
+        return CGPoint(x: left.x - right.x, y: left.y - right.y)
+    }
+    
+    func length() -> CGFloat {
+        return sqrt(x * x + y * y)
     }
 }
 
