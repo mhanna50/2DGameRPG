@@ -10,13 +10,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     // Track the last update time for spawn timing
     var lastUpdateTime: TimeInterval = 0.0
     var timeSinceLastSpawn: TimeInterval = 0.0
+    var timeSinceLastEnemySpawn: TimeInterval = 0.0
     var spawnInterval: TimeInterval = 2.0  // Coins spawn every 2 seconds
+    var enemySpawnInterval: TimeInterval = 5.0 // Spawn the new enemy every 5 seconds
+        
     
     // Physics categories for collision detection
     struct PhysicsCategory {
         static let player: UInt32 = 0x1 << 0
         static let coin: UInt32 = 0x1 << 1
         static let enemy: UInt32 = 0x1 << 2
+        static let specialEnemy: UInt32 = 0x1 << 3
     }
 
     override func didMove(to view: SKView) {
@@ -30,7 +34,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             player.physicsBody = SKPhysicsBody(rectangleOf: player.size)
             player.physicsBody?.isDynamic = true
             player.physicsBody?.categoryBitMask = PhysicsCategory.player
-            player.physicsBody?.contactTestBitMask = PhysicsCategory.coin | PhysicsCategory.enemy
+            player.physicsBody?.contactTestBitMask = PhysicsCategory.coin | PhysicsCategory.enemy | PhysicsCategory.specialEnemy
+
             player.physicsBody?.collisionBitMask = 0
             player.zPosition = 1
         }
@@ -101,11 +106,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         // Update the time since the last coin spawn
         timeSinceLastSpawn += deltaTime
+        timeSinceLastEnemySpawn += deltaTime
         
         // Spawn a new coin if the interval has passed
         if timeSinceLastSpawn >= spawnInterval {
             spawnCoinAroundPlayer()
             timeSinceLastSpawn = 0.0
+        }
+        // Spawn a new special enemy every 5 seconds
+        if timeSinceLastEnemySpawn >= enemySpawnInterval {
+            spawnSpecialEnemy()
+            timeSinceLastEnemySpawn = 0.0
         }
         
         // Keep the camera focused on the player
@@ -136,6 +147,32 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         // Add the coin to the scene
         addChild(coin)
     }
+    func spawnSpecialEnemy() {
+            // Create a new special enemy that will spawn outside of the screen
+            let spawnDirection: CGFloat = Bool.random() ? 1 : -1  // Randomly choose to spawn in front or behind
+            
+            let specialEnemy = SKSpriteNode(color: .red, size: CGSize(width: 50, height: 50))
+            let spawnX = player.position.x + (spawnDirection * 600)  // Spawn away from the player
+            specialEnemy.position = CGPoint(x: spawnX, y: player.position.y)
+            
+            // Add the enemy's physics properties
+            specialEnemy.physicsBody = SKPhysicsBody(rectangleOf: specialEnemy.size)
+            specialEnemy.physicsBody?.isDynamic = true
+            specialEnemy.physicsBody?.categoryBitMask = PhysicsCategory.specialEnemy
+            specialEnemy.physicsBody?.contactTestBitMask = PhysicsCategory.player
+            specialEnemy.physicsBody?.collisionBitMask = 0
+            
+            // Add the enemy to the scene
+            addChild(specialEnemy)
+            
+            // Set up the movement of the enemy towards the player
+            let moveAction = SKAction.move(to: player.position, duration: 15)
+            specialEnemy.run(moveAction)
+            
+            // Despawn after 15 seconds
+            let removeAction = SKAction.removeFromParent()
+            specialEnemy.run(SKAction.sequence([moveAction, removeAction]))
+    }
 
     func didBegin(_ contact: SKPhysicsContact) {
         // Get the two bodies involved in the collision
@@ -155,6 +192,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             
             // Update the score
             updateScore()
+        }
+        // Check if the player collided with the special enemy
+        if (firstBody.categoryBitMask == PhysicsCategory.player && secondBody.categoryBitMask == PhysicsCategory.specialEnemy) ||
+            (secondBody.categoryBitMask == PhysicsCategory.player && firstBody.categoryBitMask == PhysicsCategory.specialEnemy) {
+                    
+                    // End the game by calling the game over function
+            endGame()
         }
         
         // Check if the player collided with the enemy
@@ -200,3 +244,4 @@ extension CGPoint {
     }
 }
 
+ 
