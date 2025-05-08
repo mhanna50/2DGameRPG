@@ -257,6 +257,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         // Create the coin with the custom image
             let coin = SKSpriteNode(imageNamed: "object_06_coin")
+            coin.size = CGSize(width: 80, height: 80)
             coin.position = CGPoint(x: player.position.x + xOffset, y: player.position.y + yOffset)
             coin.zPosition = 0  // Coins should be behind the player
         
@@ -273,8 +274,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     func spawnSpecialEnemy() {
         // Create a new special enemy with the custom image
-            let specialEnemy = SKSpriteNode(imageNamed: "object_asteroid_02")
-            specialEnemy.size = CGSize(width: 80, height: 80)
+        let specialEnemy = SKSpriteNode(imageNamed: "object_asteroid_02")
+        specialEnemy.size = CGSize(width: 80, height: 80)
         
         // Choose a random spawn position around the player
         let spawnRadius: CGFloat = 800

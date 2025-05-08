@@ -6,12 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		F4532AF22DCC2B760045CA01 /* 2DGameMusic.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = F4532AF12DCC2B760045CA01 /* 2DGameMusic.mp3 */; };
-		F4532AF42DCC2B850045CA01 /* CoinSoundEffect.wav in Resources */ = {isa = PBXBuildFile; fileRef = F4532AF32DCC2B850045CA01 /* CoinSoundEffect.wav */; };
-		F4532AF62DCC2C510045CA01 /* GameOverSoundEffect.wav in Resources */ = {isa = PBXBuildFile; fileRef = F4532AF52DCC2C510045CA01 /* GameOverSoundEffect.wav */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXFileReference section */
 		86D6E19E2DB7D50B002CAC5E /* 2DGameRPG.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = 2DGameRPG.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		86D6E1AF2DB7D50B002CAC5E /* 2DGameRPG.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = 2DGameRPG.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -26,7 +20,6 @@
 			membershipExceptions = (
 				Actions.sks,
 				Assets.xcassets,
-				GameScene.sks,
 				GameScene.swift,
 			);
 			target = 86D6E19D2DB7D50B002CAC5E /* 2DGameRPG iOS */;
@@ -36,7 +29,6 @@
 			membershipExceptions = (
 				Actions.sks,
 				Assets.xcassets,
-				GameScene.sks,
 				GameScene.swift,
 			);
 			target = 86D6E1AE2DB7D50B002CAC5E /* 2DGameRPG macOS */;
