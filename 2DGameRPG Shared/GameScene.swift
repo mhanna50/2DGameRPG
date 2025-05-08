@@ -1,3 +1,4 @@
+import AVFoundation
 import SpriteKit
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
@@ -6,6 +7,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var score = 0
     var enemy: SKSpriteNode!
     var gameOverLabel: SKLabelNode!
+    var backgroundMusicPlayer: AVAudioPlayer?
     
     // Flag to track game over state
     var isGameOver = false
@@ -28,6 +30,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
 
     override func didMove(to view: SKView) {
+        // Play background music
+        playBackgroundMusic(filename: "2DGameMusic.mp3")
+        
         // Set up physics world
         physicsWorld.gravity = .zero
         physicsWorld.contactDelegate = self
@@ -211,7 +216,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             } else if secondBody.categoryBitMask == PhysicsCategory.coin {
                 secondBody.node?.removeFromParent()
             }
-            
+            run(SKAction.playSoundFileNamed("CoinSoundEffect.wav", waitForCompletion: false))
             // Update the score
             updateScore()
         }
@@ -231,6 +236,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             endGame()
         }
     }
+    
+    func playBackgroundMusic(filename: String) {
+        if let url = Bundle.main.url(forResource: filename, withExtension: nil) {
+            do {
+                backgroundMusicPlayer = try AVAudioPlayer(contentsOf: url)
+                backgroundMusicPlayer?.numberOfLoops = -1 // Plays repeatedly
+                backgroundMusicPlayer?.prepareToPlay()
+                backgroundMusicPlayer?.play()
+            } catch {
+                print("Could not load music file: \(error)")
+            }
+        }
+    }
 
     func updateScore() {
         score += 1
@@ -241,6 +259,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
 
     func endGame() {
+        // Play sound effect
+        run(SKAction.playSoundFileNamed("GameOverSoundEffect.wav", waitForCompletion: false))
+        
         // Show the "Game Over" label
         gameOverLabel.isHidden = false
         
