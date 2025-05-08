@@ -195,9 +195,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F4532AF62DCC2C510045CA01 /* GameOverSoundEffect.wav in Resources */,
-				F4532AF42DCC2B850045CA01 /* CoinSoundEffect.wav in Resources */,
-				F4532AF22DCC2B760045CA01 /* 2DGameMusic.mp3 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

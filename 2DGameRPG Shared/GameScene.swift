@@ -17,7 +17,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var timeSinceLastSpawn: TimeInterval = 0.0
     var timeSinceLastEnemySpawn: TimeInterval = 0.0
     var spawnInterval: TimeInterval = 2.0  // Coins spawn every 2 seconds
-    var enemySpawnInterval: TimeInterval = 5.0 // Spawn the new enemy every 5 seconds
+    var enemySpawnInterval: TimeInterval = 1.5 // Spawn the new enemy every 5 seconds
         
     
     // Physics categories for collision detection
@@ -32,26 +32,36 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     override func didMove(to view: SKView) {
         // Play background music
         playBackgroundMusic(filename: "2DGameMusic.mp3")
+        // Add background
+        let background = SKSpriteNode(imageNamed: "bg_single_640x1600")
+        background.position = CGPoint(x: 0, y: 0)
+        background.zPosition = -1  // Behind all other elements
+        background.size = CGSize(width: 4000, height: 4000)
+        addChild(background)
+
         
         // Set up physics world
         physicsWorld.gravity = .zero
         physicsWorld.contactDelegate = self
         
-        // Create a physics border for the entire scene
-        let borderBody = SKPhysicsBody(edgeLoopFrom: frame)
+        // Create a physics border that is much larger than the screen
+        let borderSize = CGSize(width: 4000, height: 4000)
+        let borderRect = CGRect(x: -borderSize.width / 2, y: -borderSize.height / 2, width: borderSize.width, height: borderSize.height)
+        let borderBody = SKPhysicsBody(edgeLoopFrom: borderRect)
         borderBody.categoryBitMask = PhysicsCategory.border
         borderBody.contactTestBitMask = PhysicsCategory.player
         borderBody.collisionBitMask = PhysicsCategory.player
         borderBody.isDynamic = false
         borderBody.restitution = 0  // Prevents bouncing off the walls
         self.physicsBody = borderBody
-        
+
         // Create a visible border using SKShapeNode
-        let borderNode = SKShapeNode(rect: frame)
+        let borderNode = SKShapeNode(rect: borderRect)
         borderNode.strokeColor = .red
         borderNode.lineWidth = 5
         borderNode.zPosition = 10  // Make sure it's above other background elements
         addChild(borderNode)
+
 
         // Connect to the player node from the .sks file
         if let playerNode = childNode(withName: "player") as? SKSpriteNode {
@@ -245,10 +255,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let xOffset = spawnRadius * cos(angle)
         let yOffset = spawnRadius * sin(angle)
         
-        // Create the coin and position it around the player
-        let coin = SKSpriteNode(color: .yellow, size: CGSize(width: 30, height: 30))
-        coin.position = CGPoint(x: player.position.x + xOffset, y: player.position.y + yOffset)
-        coin.zPosition = 0  // Coins should be behind the player
+        // Create the coin with the custom image
+            let coin = SKSpriteNode(imageNamed: "object_06_coin")
+            coin.position = CGPoint(x: player.position.x + xOffset, y: player.position.y + yOffset)
+            coin.zPosition = 0  // Coins should be behind the player
         
         // Set up physics properties for the coin
         coin.physicsBody = SKPhysicsBody(rectangleOf: coin.size)
@@ -260,32 +270,45 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         // Add the coin to the scene
         addChild(coin)
     }
+    
     func spawnSpecialEnemy() {
-            // Create a new special enemy that will spawn outside of the screen
-            let spawnDirection: CGFloat = Bool.random() ? 1 : -1  // Randomly choose to spawn in front or behind
-            
-            let specialEnemy = SKSpriteNode(color: .red, size: CGSize(width: 50, height: 50))
-            let spawnX = player.position.x + (spawnDirection * 600)  // Spawn away from the player
-            specialEnemy.position = CGPoint(x: spawnX, y: player.position.y)
-            
-            // Add the enemy's physics properties
-            specialEnemy.physicsBody = SKPhysicsBody(rectangleOf: specialEnemy.size)
-            specialEnemy.physicsBody?.isDynamic = true
-            specialEnemy.physicsBody?.categoryBitMask = PhysicsCategory.specialEnemy
-            specialEnemy.physicsBody?.contactTestBitMask = PhysicsCategory.player
-            specialEnemy.physicsBody?.collisionBitMask = 0
-            
-            // Add the enemy to the scene
-            addChild(specialEnemy)
-            
-            // Set up the movement of the enemy towards the player
-            let moveAction = SKAction.move(to: player.position, duration: 15)
-            specialEnemy.run(moveAction)
-            
-            // Despawn after 15 seconds
-            let removeAction = SKAction.removeFromParent()
-            specialEnemy.run(SKAction.sequence([moveAction, removeAction]))
+        // Create a new special enemy with the custom image
+            let specialEnemy = SKSpriteNode(imageNamed: "object_asteroid_02")
+            specialEnemy.size = CGSize(width: 80, height: 80)
+        
+        // Choose a random spawn position around the player
+        let spawnRadius: CGFloat = 800
+        let angle = CGFloat.random(in: 0..<2 * .pi)
+        let xOffset = spawnRadius * cos(angle)
+        let yOffset = spawnRadius * sin(angle)
+        specialEnemy.position = player.position + CGPoint(x: xOffset, y: yOffset)
+        
+        // Add the enemy's physics properties
+        specialEnemy.physicsBody = SKPhysicsBody(rectangleOf: specialEnemy.size)
+        specialEnemy.physicsBody?.isDynamic = true
+        specialEnemy.physicsBody?.categoryBitMask = PhysicsCategory.specialEnemy
+        specialEnemy.physicsBody?.contactTestBitMask = PhysicsCategory.player
+        specialEnemy.physicsBody?.collisionBitMask = 0
+        
+        // Add the enemy to the scene
+        addChild(specialEnemy)
+        
+        // Set up the movement of the enemy towards the player
+        let moveDuration = 3.0 + Double.random(in: 0.5...2.0)  // Vary the speed a bit for unpredictability
+        let moveAction = SKAction.move(to: player.position, duration: moveDuration)
+        
+        // Despawn after 40 seconds
+        _ = SKAction.wait(forDuration: 40.0)
+        let removeAction = SKAction.removeFromParent()
+        
+        // Run the movement repeatedly for 40 seconds before despawning
+        let moveAndWaitSequence = SKAction.sequence([moveAction, SKAction.wait(forDuration: 0.5)])
+        let repeatMovement = SKAction.repeat(moveAndWaitSequence, count: Int(40.0 / (moveDuration + 0.5)))
+        let fullSequence = SKAction.sequence([repeatMovement, removeAction])
+        
+        specialEnemy.run(fullSequence)
     }
+
 
     func didBegin(_ contact: SKPhysicsContact) {
         // Get the two bodies involved in the collision
@@ -355,7 +378,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         gameOverLabel.position = CGPoint(x: player.position.x, y: player.position.y + 50) // Adjust the position as needed
         
         // Disable player movement and any other actions
+        // Remove all player actions and stop physics movement
+        player.physicsBody?.velocity = .zero
+        player.physicsBody?.angularVelocity = 0
         player.removeAllActions()
+        player.removeAllActions()
+        
+        
         
         isGameOver = true
         
@@ -365,7 +394,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 }
 
 // Helper extensions for CGPoint to handle movement and directions
+// Helper extensions for CGPoint to handle movement and directions
 extension CGPoint {
+    static func +(left: CGPoint, right: CGPoint) -> CGPoint {
+        return CGPoint(x: left.x + right.x, y: left.y + right.y)
+    }
+    
     static func -(left: CGPoint, right: CGPoint) -> CGPoint {
         return CGPoint(x: left.x - right.x, y: left.y - right.y)
     }
