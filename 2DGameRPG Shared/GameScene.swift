@@ -78,6 +78,42 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let cameraNode = SKCameraNode()
         camera = cameraNode
         addChild(cameraNode)
+        
+        // Set up directional pad
+        func addDPad() {
+            let buttonSize = CGSize(width: 50, height: 50)
+            let dPadPosition = CGPoint(x: frame.minX + 100, y: frame.minY + 100)
+
+            let up = SKSpriteNode(imageNamed: "arrow_up")
+            up.name = "up"
+            up.size = buttonSize
+            up.position = CGPoint(x: dPadPosition.x, y: dPadPosition.y + 45)
+            up.zPosition = 10
+            camera?.addChild(up)
+
+            let down = SKSpriteNode(imageNamed: "arrow_down")
+            down.name = "down"
+            down.size = buttonSize
+            down.position = CGPoint(x: dPadPosition.x, y: dPadPosition.y - 45)
+            down.zPosition = 10
+            camera?.addChild(down)
+
+            let left = SKSpriteNode(imageNamed: "arrow_left")
+            left.name = "left"
+            left.size = buttonSize
+            left.position = CGPoint(x: dPadPosition.x - 45, y: dPadPosition.y)
+            left.zPosition = 10
+            camera?.addChild(left)
+
+            let right = SKSpriteNode(imageNamed: "arrow_right")
+            right.name = "right"
+            right.size = buttonSize
+            right.position = CGPoint(x: dPadPosition.x + 45, y: dPadPosition.y)
+            right.zPosition = 10
+            camera?.addChild(right)
+        }
+        
+        addDPad()
 
         // Set up game over label (hidden initially)
         gameOverLabel = SKLabelNode(fontNamed: "Arial")
@@ -89,7 +125,57 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         gameOverLabel.zPosition = 3
         gameOverLabel.name = "gameOverLabel"
     }
+    
+    // Directional pad movement
 
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if isGameOver { return }
+
+        guard let touch = touches.first else { return }
+        let location = touch.location(in: self)
+        let nodes = nodes(at: location)
+
+        for node in nodes {
+            if let name = node.name {
+                switch name {
+                case "up":
+                    movePlayer(direction: .up)
+                case "down":
+                    movePlayer(direction: .down)
+                case "left":
+                    movePlayer(direction: .left)
+                case "right":
+                    movePlayer(direction: .right)
+                default:
+                    break
+                }
+            }
+        }
+    }
+    
+    enum Direction {
+        case up, down, left, right
+    }
+    
+    func movePlayer(direction: Direction) {
+        let moveSpeed: CGFloat = 200
+        var velocity = CGVector(dx: 0, dy: 0)
+
+        switch direction {
+        case .up:
+            velocity.dy = moveSpeed
+        case .down:
+            velocity.dy = -moveSpeed
+        case .left:
+            velocity.dx = -moveSpeed
+        case .right:
+            velocity.dx = moveSpeed
+        }
+
+        player.physicsBody?.velocity = velocity
+    }
+    
+    // Movement by tapping on screen, instead of directional pad
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         if isGameOver {
